@@ -17,7 +17,7 @@ async def submit_form(termsAgree: bool = Form(...), email: EmailStr = Form(...),
         return HTMLResponse(content="<html><body><p>PayPayの送金リンクが不正です</p></body></html>", status_code=400)
     
     # Google Apps ScriptのWebアプリケーションURL
-    gas_url = 'https://script.google.com/macros/s/AKfycbytgZTieecoSiPfQMPIBEu5CQiAb2_a_NTgERdplXfYjLTPEyCc5FoSv2NsUDZYCeGt/exec'
+    gas_url = 'https://script.google.com/macros/s/AKfycbwwOFtVybl6AbKfm4kBqK1k5FzlubydI02aGOnkWeXp13Qu6wh5RAE90hgVgYybNUBg/exec'
 
     # リクエストデータ
     data = {
@@ -31,7 +31,7 @@ async def submit_form(termsAgree: bool = Form(...), email: EmailStr = Form(...),
     # レスポンスの確認
     if response.status_code == 200:
         # HTML形式で正常なレスポンスを返す
-        return HTMLResponse(content="<html><body><p>購入完了</p><p>メールをご確認ください</p></body></html>")
+        return HTMLResponse(content="<html><body><p>購入が完了しました</p><p>メールをご確認ください</p></body></html>")
     else:
         # エラーレスポンス
         return HTMLResponse(content="<html><body><p>エラーが発生しました</p></body></html>", status_code=500)
