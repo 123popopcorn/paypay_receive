@@ -2,6 +2,7 @@ from fastapi import FastAPI, Form, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, EmailStr
 import re
+import requests
 
 app = FastAPI()
 
@@ -15,21 +16,22 @@ async def submit_form(termsAgree: bool = Form(...), email: EmailStr = Form(...),
     if not re.match(PAYPAY_LINK_PATTERN, paypayLink):
         return HTMLResponse(content="<html><body><p>PayPayの送金リンクが不正です</p></body></html>", status_code=400)
     
-    # HTML形式で正常なレスポンスを返す
-    return f"""
-        <!DOCTYPE html>
-        <html>
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>購入完了</title>
-            </head>
-            <body>
-            <p>購入ありがとうございます</p>
-            <span>内容は以下のリンクからご確認ください<br></span>
-            <span><b>※リンクは必ず保存してください</b>（メモ、スクショ、Google Driveなど）<br></span>
-            <a href="https://docs.google.com/document/d/1Dnlb9-tmgx-8b6yCKlMrlK1gG-qPERRCTAGo5Kmi0rU/edit?usp=sharing">https://docs.google.com/document/d/1Dnlb9-tmgx-8b6yCKlMrlK1gG-qPERRCTAGo5Kmi0rU/edit?usp=sharing</a>
-            <p>ご不明点やご質問等ございましたら、X(@wanpooochi)のDMまでご連絡ください</p>
-            </body>
-        </html>
-    """
+    # Google Apps ScriptのWebアプリケーションURL
+    gas_url = 'https://script.google.com/macros/s/AKfycbytgZTieecoSiPfQMPIBEu5CQiAb2_a_NTgERdplXfYjLTPEyCc5FoSv2NsUDZYCeGt/exec'
+
+    # リクエストデータ
+    data = {
+        'paypayLink': paypayLink,
+        'email': email
+    }
+
+    # GASのWebアプリケーションにPOSTリクエストを送信
+    response = requests.post(gas_url, data=data)
+
+    # レスポンスの確認
+    if response.status_code == 200:
+        # HTML形式で正常なレスポンスを返す
+        return HTMLResponse(content="<html><body><p>購入完了</p><p>メールをご確認ください</p></body></html>")
+    else:
+        # エラーレスポンス
+        return HTMLResponse(content="<html><body><p>エラーが発生しました</p></body></html>", status_code=500)
