@@ -17,7 +17,7 @@ async def submit_form(termsAgree: bool = Form(...), email: EmailStr = Form(...),
         return HTMLResponse(content="<html><body><p>PayPayの送金リンクが不正です</p></body></html>", status_code=400)
     
     # Google Apps ScriptのWebアプリケーションURL
-    gas_url = 'https://script.google.com/macros/s/AKfycbwwOFtVybl6AbKfm4kBqK1k5FzlubydI02aGOnkWeXp13Qu6wh5RAE90hgVgYybNUBg/exec'
+    gas_url = 'https://script.google.com/macros/s/AKfycbx2m2YffyHAMgYgdyVA4Y_6G9SNPopVf_FoN9ddvg-X-vhy7rFG73xWeT1UxbWZ0jQE/exec'
 
     # リクエストデータ
     data = {
