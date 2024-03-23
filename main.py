@@ -2,7 +2,7 @@ from fastapi import FastAPI, Form, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, EmailStr
 import re
-import httpx
+import requests
 import PayPaython
 import datetime
 import os
@@ -28,33 +28,31 @@ proxies = {
 
 @app.post("/submit-form/", response_class=HTMLResponse)
 async def submit_form(termsAgree: bool = Form(...), email: EmailStr = Form(...), paypayLink: str = Form(...)):
-    check_result, message = check_paypay_link(paypayLink)
+    # ログイン
+    paypay=PayPaython.PayPay(phone=phone,password=password, client_uuid=client_uuid, proxy=proxies)
+    check_result, message = check_paypay_link(paypay,paypayLink)
     if check_result:
         # link_idの抽出
         link_id = paypayLink.split('/')[-1]
-
-        # ログイン
-        paypay = PayPaython.PayPay(phone=phone, password=password, client_uuid=client_uuid, proxy=proxies['http'])
 
         # 受け取り
         paypay.receive(link_id)
 
         # 受け取りが完了したら、GASにPOSTリクエストを送信
-        async with httpx.AsyncClient() as client:
-            gas_url = GASWebAppURL
-            data = {
-                'paypayLink': paypayLink,
-                'email': email
-            }
-            response = await client.post(gas_url, data=data)
+        gas_url = GASWebAppURL
+        data = {
+            'paypayLink': paypayLink,
+            'email': email
+        }
+        response = requests.post(gas_url, data=data)
 
-            if response.status_code == 200:
-                return HTMLResponse(content="<html><body>購入が完了しました。メールをご確認ください。</body></html>", status_code=200)
-            else:
-                paypay.reject(link_id)
-                raise HTTPException(status_code=400, detail="GASへのPOSTリクエストに失敗しました。")
+        if response.status_code == 200:
+            return HTMLResponse(content="<html><body>購入が完了しました。メールをご確認ください。</body></html>", status_code=200)
+        else:
+            paypay.reject(link_id)
+            raise HTTPException(status_code=400, detail="GASへのPOSTリクエストに失敗しました。")
     else:
-        # 送金リンクを辞退
+        #送金リンクを辞退
         paypay.reject(link_id)
         raise HTTPException(status_code=400, detail=f"受け取り失敗: {message}")
 
@@ -65,10 +63,10 @@ def check_paypay_link_format(url):
         return False, "PayPayの送金リンクが不正です。"
     return True, "リンク形式が正しいです。"
 
-def check_paypay_link(url):
+def check_paypay_link(paypay,url):
     
     # URL形式の確認
-    format_check, message = check_paypay_link_format(url)
+    format_check, message = check_paypay_link_format(url,proxy=proxies['http'])
     if not format_check:
         return False, message
     
@@ -76,7 +74,7 @@ def check_paypay_link(url):
     link_id = url.split('/')[-1]
     
     # 送金リンクチェック
-    result = PayPaython.Pay2().check_link(link_id)
+    result = paypay.check_link(link_id)
     
     # エラーレスポンスの確認
     if 'error' in result:
