@@ -3,35 +3,108 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, EmailStr
 import re
 import requests
+import PayPaython
+import datetime
+import os
+from dotenv import load_dotenv
 
 app = FastAPI()
 
-# PayPayリンクの形式を確認する簡単な正規表現
-PAYPAY_LINK_PATTERN = r"^https://pay\.paypay\.ne\.jp/[a-zA-Z0-9]+$"
+kingaku = 30000
+
+# 環境変数から値を取得
+phone = os.getenv('PHONE')
+password = os.getenv('PASSWORD')
+client_uuid = os.getenv('CLIENT_UUID')
+proxy_user = os.getenv('PROXY_USER')
+proxy_pass = os.getenv('PROXY_PASS')
+proxy_address = os.getenv('PROXY_ADDRESS')
+GASWebAppURL = os.getenv('GAS')
+# プロキシ設定の辞書を作成
+proxies = {
+    "http": f"http://{proxy_user}:{proxy_pass}@{proxy_address}",
+    "https": f"http://{proxy_user}:{proxy_pass}@{proxy_address}",
+}
 
 @app.post("/submit-form/", response_class=HTMLResponse)
 async def submit_form(termsAgree: bool = Form(...), email: EmailStr = Form(...), paypayLink: str = Form(...)):
-    if not termsAgree:
-        return HTMLResponse(content="<html><body><p>利用規約に同意してください</p></body></html>", status_code=400)
-    if not re.match(PAYPAY_LINK_PATTERN, paypayLink):
-        return HTMLResponse(content="<html><body><p>PayPayの送金リンクが不正です</p></body></html>", status_code=400)
-    
-    # Google Apps ScriptのWebアプリケーションURL
-    gas_url = 'https://script.google.com/macros/s/AKfycbx2m2YffyHAMgYgdyVA4Y_6G9SNPopVf_FoN9ddvg-X-vhy7rFG73xWeT1UxbWZ0jQE/exec'
+    check_result, message = check_paypay_link(paypayLink)
+    if check_result:
+        # link_idの抽出
+        link_id = paypayLink.split('/')[-1]
 
-    # リクエストデータ
-    data = {
-        'paypayLink': paypayLink,
-        'email': email
-    }
+        # ログイン
+        paypay=PayPaython.PayPay(phone=phone,password=password, client_uuid=client_uuid, proxy=proxies['http'])
 
-    # GASのWebアプリケーションにPOSTリクエストを送信
-    response = requests.post(gas_url, data=data)
+        # 受け取り
+        receive_result = paypay.receive(link_id)
+        print(receive_result)
 
-    # レスポンスの確認
-    if response.status_code == 200:
-        # HTML形式で正常なレスポンスを返す
-        return HTMLResponse(content="<html><body><p>購入が完了しました</p><p>メールをご確認ください</p></body></html>")
+        # 受け取りが完了したら、GASにPOSTリクエストを送信
+        gas_url = GASWebAppURL
+        data = {
+            'paypayLink': paypayLink,
+            'email': email
+        }
+        response = requests.post(gas_url, data=data)
+        if response.status_code == 200:
+            return True, "受け取り完了。購入が完了しました。メールをご確認ください。"
+        else:
+            return False, "GASへのPOSTリクエストに失敗しました。"
     else:
-        # エラーレスポンス
-        return HTMLResponse(content="<html><body><p>エラーが発生しました</p></body></html>", status_code=500)
+        #送金リンクを辞退
+        print(paypay.reject(link_id))
+        return False, "受け取り失敗: " + message
+
+def check_paypay_link_format(url):
+    # PayPayリンクの形式を確認する正規表現パターン
+    PAYPAY_LINK_PATTERN = r"^https://pay\.paypay\.ne\.jp/[a-zA-Z0-9]+$"
+    if not re.match(PAYPAY_LINK_PATTERN, url):
+        return False, "PayPayの送金リンクが不正です。"
+    return True, "リンク形式が正しいです。"
+
+def check_paypay_link(url):
+    
+    # URL形式の確認
+    format_check, message = check_paypay_link_format(url)
+    if not format_check:
+        return False, message
+    
+    # link_idの抽出
+    link_id = url.split('/')[-1]
+    
+    # 送金リンクチェック
+    result = PayPaython.Pay2().check_link(link_id)
+    
+    # エラーレスポンスの確認
+    if 'error' in result:
+        error_info = result['error']['displayErrorResponse']
+        return False, error_info['title'] + ": " + error_info['description']
+    
+    # payload内の情報を取得（エラーがない場合）
+    payload = result['payload']
+    pending_info = payload['pendingP2PInfo']
+    
+    # 条件1: 金額チェック
+    if pending_info['amount'] != kingaku:
+        return False, "金額が間違っています"
+    
+    # 条件2: パスコードの有無
+    if pending_info['isSetPasscode']:
+        return False, "リンクはパスコードが設定されています。"
+    
+    # 条件3: 有効期限のチェック
+    # JSTとUTCの差分
+    DIFF_JST_FROM_UTC = 9
+    now = datetime.datetime.utcnow() + datetime.timedelta(hours=DIFF_JST_FROM_UTC)
+    created_at = datetime.strptime(pending_info['createdAt'], '%Y-%m-%dT%H:%M:%SZ')
+    expired_at = datetime.strptime(pending_info['expiredAt'], '%Y-%m-%dT%H:%M:%SZ')
+    if not (created_at <= now <= expired_at):
+        return False, "リンクの有効期限が切れています。"
+    
+    # 条件4: リンクのブロック状態
+    if pending_info['isLinkBlocked']:
+        return False, "リンクはブロックされています。"
+
+    # すべての条件を満たす場合
+    return True, "送金リンクは受け取り可能です。"
