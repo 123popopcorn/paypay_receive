@@ -92,17 +92,17 @@ def check_paypay_link(paypay,url):
     # 条件2: パスコードの有無
     if pending_info['isSetPasscode']:
         return False, "リンクはパスコードが設定されています。"
-    
+    '''
     # 条件3: 有効期限のチェック
     # JSTとUTCの差分
     DIFF_JST_FROM_UTC = 9
-    now = datetime.datetime.utcnow() + datetime.timedelta(hours=DIFF_JST_FROM_UTC)
+    now = datetime.utcnow() + datetime.timedelta(hours=DIFF_JST_FROM_UTC)
     created_at = datetime.strptime(pending_info['createdAt'], '%Y-%m-%dT%H:%M:%SZ')
     expired_at = datetime.strptime(pending_info['expiredAt'], '%Y-%m-%dT%H:%M:%SZ')
 
     if not (created_at <= now <= expired_at):
         return False, "リンクの有効期限が切れています。"
-    
+    '''
     # 条件4: リンクのブロック状態
     if pending_info['isLinkBlocked']:
         return False, "リンクはブロックされています。"
