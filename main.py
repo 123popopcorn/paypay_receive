@@ -4,7 +4,7 @@ from pydantic import BaseModel, EmailStr
 import re
 import requests
 import PayPaython
-import datetime
+from datetime import datetime
 import os
 from dotenv import load_dotenv
 
@@ -99,6 +99,7 @@ def check_paypay_link(paypay,url):
     now = datetime.datetime.utcnow() + datetime.timedelta(hours=DIFF_JST_FROM_UTC)
     created_at = datetime.strptime(pending_info['createdAt'], '%Y-%m-%dT%H:%M:%SZ')
     expired_at = datetime.strptime(pending_info['expiredAt'], '%Y-%m-%dT%H:%M:%SZ')
+
     if not (created_at <= now <= expired_at):
         return False, "リンクの有効期限が切れています。"
     
