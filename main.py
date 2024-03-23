@@ -2,7 +2,7 @@ from fastapi import FastAPI, Form, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, EmailStr
 import re
-import requests
+import httpx
 import PayPaython
 import datetime
 import os
@@ -34,26 +34,27 @@ async def submit_form(termsAgree: bool = Form(...), email: EmailStr = Form(...),
         link_id = paypayLink.split('/')[-1]
 
         # ログイン
-        paypay=PayPaython.PayPay(phone=phone,password=password, client_uuid=client_uuid, proxy=proxies['http'])
+        paypay = PayPaython.PayPay(phone=phone, password=password, client_uuid=client_uuid, proxy=proxies['http'])
 
         # 受け取り
         paypay.receive(link_id)
 
         # 受け取りが完了したら、GASにPOSTリクエストを送信
-        gas_url = GASWebAppURL
-        data = {
-            'paypayLink': paypayLink,
-            'email': email
-        }
-        response = requests.post(gas_url, data=data)
+        async with httpx.AsyncClient() as client:
+            gas_url = GASWebAppURL
+            data = {
+                'paypayLink': paypayLink,
+                'email': email
+            }
+            response = await client.post(gas_url, data=data)
 
-        if response.status_code == 200:
-            return HTMLResponse(content="<html><body>購入が完了しました。メールをご確認ください。</body></html>", status_code=200)
-        else:
-            paypay.reject(link_id)
-            raise HTTPException(status_code=400, detail="GASへのPOSTリクエストに失敗しました。")
+            if response.status_code == 200:
+                return HTMLResponse(content="<html><body>購入が完了しました。メールをご確認ください。</body></html>", status_code=200)
+            else:
+                paypay.reject(link_id)
+                raise HTTPException(status_code=400, detail="GASへのPOSTリクエストに失敗しました。")
     else:
-        #送金リンクを辞退
+        # 送金リンクを辞退
         paypay.reject(link_id)
         raise HTTPException(status_code=400, detail=f"受け取り失敗: {message}")
 
