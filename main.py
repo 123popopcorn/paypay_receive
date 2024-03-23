@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 
 app = FastAPI()
 
-kingaku = 30000
+kingaku = 5
 
 # 環境変数から値を取得
 phone = os.getenv('PHONE')
