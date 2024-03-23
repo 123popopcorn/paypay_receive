@@ -66,7 +66,7 @@ def check_paypay_link_format(url):
 def check_paypay_link(paypay,url):
     
     # URL形式の確認
-    format_check, message = check_paypay_link_format(url,proxy=proxies['http'])
+    format_check, message = check_paypay_link_format(url)
     if not format_check:
         return False, message
     
