@@ -37,8 +37,7 @@ async def submit_form(termsAgree: bool = Form(...), email: EmailStr = Form(...),
         paypay=PayPaython.PayPay(phone=phone,password=password, client_uuid=client_uuid, proxy=proxies['http'])
 
         # 受け取り
-        receive_result = paypay.receive(link_id)
-        print(receive_result)
+        paypay.receive(link_id)
 
         # 受け取りが完了したら、GASにPOSTリクエストを送信
         gas_url = GASWebAppURL
@@ -47,14 +46,16 @@ async def submit_form(termsAgree: bool = Form(...), email: EmailStr = Form(...),
             'email': email
         }
         response = requests.post(gas_url, data=data)
+
         if response.status_code == 200:
-            return True, "受け取り完了。購入が完了しました。メールをご確認ください。"
+            return HTMLResponse(content="<html><body>購入が完了しました。メールをご確認ください。</body></html>", status_code=200)
         else:
-            return False, "GASへのPOSTリクエストに失敗しました。"
+            paypay.reject(link_id)
+            raise HTTPException(status_code=400, detail="GASへのPOSTリクエストに失敗しました。")
     else:
         #送金リンクを辞退
-        print(paypay.reject(link_id))
-        return False, "受け取り失敗: " + message
+        paypay.reject(link_id)
+        raise HTTPException(status_code=400, detail=f"受け取り失敗: {message}")
 
 def check_paypay_link_format(url):
     # PayPayリンクの形式を確認する正規表現パターン
