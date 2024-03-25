@@ -28,8 +28,9 @@ proxies = {
 
 @app.post("/submit-form/", response_class=HTMLResponse)
 async def submit_form(termsAgree: bool = Form(...), email: EmailStr = Form(...), paypayLink: str = Form(...)):
-    # ログイン
+    # リンクチェック
     check_result, message = check_paypay_link(paypayLink)
+
     # link_idの抽出
     link_id = paypayLink.split('/')[-1]
 
@@ -55,22 +56,22 @@ async def submit_form(termsAgree: bool = Form(...), email: EmailStr = Form(...),
     else:
         return HTMLResponse(content=f"<html><body>購入失敗: {message}</body></html>", status_code=400)
 
-def check_paypay_link_format(url):
+def check_paypay_link_format(paypayLink):
     # PayPayリンクの形式を確認する正規表現パターン
     PAYPAY_LINK_PATTERN = r"^https://pay\.paypay\.ne\.jp/[a-zA-Z0-9]+$"
-    if not re.match(PAYPAY_LINK_PATTERN, url):
+    if not re.match(PAYPAY_LINK_PATTERN, paypayLink):
         return False, "PayPayの送金リンクが不正です。"
     return True, "リンク形式が正しいです。"
 
-def check_paypay_link(paypay,url):
+def check_paypay_link(paypayLink):
     
     # URL形式の確認
-    format_check, message = check_paypay_link_format(url)
+    format_check, message = check_paypay_link_format(paypayLink)
     if not format_check:
         return False, message
     
     # link_idの抽出
-    link_id = url.split('/')[-1]
+    link_id = paypayLink.split('/')[-1]
     
     # 送金リンクチェック
     result = PayPaython.Pay2(proxy=proxies).check_link(link_id)
