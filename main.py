@@ -4,7 +4,7 @@ from pydantic import BaseModel, EmailStr
 import re
 import requests
 import PayPaython
-from datetime import datetime, timedelta
+from datetime import datetime, timezone
 import os
 from dotenv import load_dotenv
 
@@ -29,11 +29,13 @@ proxies = {
 @app.post("/submit-form/", response_class=HTMLResponse)
 async def submit_form(termsAgree: bool = Form(...), email: EmailStr = Form(...), paypayLink: str = Form(...)):
     # ログイン
-    paypay=PayPaython.PayPay(phone=phone,password=password, client_uuid=client_uuid, proxy=proxies)
-    check_result, message = check_paypay_link(paypay,paypayLink)
+    check_result, message = check_paypay_link(paypayLink)
+    # link_idの抽出
+    link_id = paypayLink.split('/')[-1]
+
     if check_result:
-        # link_idの抽出
-        link_id = paypayLink.split('/')[-1]
+
+        paypay=PayPaython.PayPay(phone=phone,password=password, client_uuid=client_uuid, proxy=proxies)
 
         # 受け取り
         paypay.receive(link_id)
@@ -47,14 +49,11 @@ async def submit_form(termsAgree: bool = Form(...), email: EmailStr = Form(...),
         response = requests.post(gas_url, data=data)
 
         if response.status_code == 200:
-            return HTMLResponse(content="<html><body>購入が完了しました。メールをご確認ください。</body></html>", status_code=200)
+            return HTMLResponse(content="<html><body>購入完了<br>メールをご確認ください。</body></html>", status_code=200)
         else:
-            paypay.reject(link_id)
-            raise HTTPException(status_code=400, detail="GASへのPOSTリクエストに失敗しました。")
+            return HTMLResponse(content=f"<html><body>GASへのPOSTリクエストに失敗しました<br>エラー詳細: {response.text}</body></html>", status_code=400)
     else:
-        #送金リンクを辞退
-        paypay.reject(link_id)
-        raise HTTPException(status_code=400, detail=f"受け取り失敗: {message}")
+        return HTMLResponse(content=f"<html><body>購入失敗: {message}</body></html>", status_code=400)
 
 def check_paypay_link_format(url):
     # PayPayリンクの形式を確認する正規表現パターン
@@ -74,7 +73,7 @@ def check_paypay_link(paypay,url):
     link_id = url.split('/')[-1]
     
     # 送金リンクチェック
-    result = paypay.check_link(link_id)
+    result = PayPaython.Pay2(proxy=proxies).check_link(link_id)
     
     # エラーレスポンスの確認
     if 'error' in result:
@@ -91,21 +90,19 @@ def check_paypay_link(paypay,url):
     
     # 条件2: パスコードの有無
     if pending_info['isSetPasscode']:
-        return False, "リンクはパスコードが設定されています。"
-    '''
+        return False, "パスコードが設定されています"
+    
     # 条件3: 有効期限のチェック
-    # JSTとUTCの差分
-    DIFF_JST_FROM_UTC = 9
-    now = datetime.utcnow() + datetime.timedelta(hours=DIFF_JST_FROM_UTC)
-    created_at = datetime.strptime(pending_info['createdAt'], '%Y-%m-%dT%H:%M:%SZ')
-    expired_at = datetime.strptime(pending_info['expiredAt'], '%Y-%m-%dT%H:%M:%SZ')
+    now = datetime.now(timezone.utc)
+    created_at = datetime.strptime(pending_info['createdAt'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc)
+    expired_at = datetime.strptime(pending_info['expiredAt'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc)
 
     if not (created_at <= now <= expired_at):
-        return False, "リンクの有効期限が切れています。"
-    '''
+        return False, "リンクの有効期限が切れています"
+    
     # 条件4: リンクのブロック状態
     if pending_info['isLinkBlocked']:
-        return False, "リンクはブロックされています。"
+        return False, "リンクはブロックされています"
 
     # すべての条件を満たす場合
-    return True, "送金リンクは受け取り可能です。"
+    return True, "送金リンクは受け取り可能です"
