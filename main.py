@@ -19,7 +19,7 @@ client_uuid = os.getenv('CLIENT_UUID')
 proxy_user = os.getenv('PROXY_USER')
 proxy_pass = os.getenv('PROXY_PASS')
 proxy_address = os.getenv('PROXY_ADDRESS')
-GASWebAppURL = os.getenv('GAS')
+
 # プロキシ設定の辞書を作成
 proxies = {
     "http": f"http://{proxy_user}:{proxy_pass}@{proxy_address}",
@@ -27,7 +27,7 @@ proxies = {
 }
 
 @app.post("/submit-form/", response_class=HTMLResponse)
-async def submit_form(termsAgree: bool = Form(...), email: EmailStr = Form(...), paypayLink: str = Form(...)):
+async def submit_form(termsAgree: bool = Form(...), paypayLink: str = Form(...)):
     # リンクチェック
     check_result, message = check_paypay_link(paypayLink)
 
@@ -39,22 +39,71 @@ async def submit_form(termsAgree: bool = Form(...), email: EmailStr = Form(...),
         paypay=PayPaython.PayPay(phone=phone,password=password, client_uuid=client_uuid, proxy=proxies)
 
         # 受け取り
-        paypay.receive(link_id)
+        order_status = paypay.receive(link_id)['payload']['orderStatus']
+        if order_status == 'COMPLETED':
 
-        # 受け取りが完了したら、GASにPOSTリクエストを送信
-        gas_url = GASWebAppURL
-        data = {
-            'paypayLink': paypayLink,
-            'email': email
-        }
-        response = requests.post(gas_url, data=data)
-
-        if response.status_code == 200:
-            return HTMLResponse(content="<html><body>購入完了<br>メールをご確認ください。</body></html>", status_code=200)
+            return HTMLResponse(content="""
+    <!DOCTYPE html>
+    <html lang="ja">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>購入完了</title>
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" crossorigin="anonymous">
+    </head>
+    <body>
+        <div class="container mt-5">
+        <div class="col-12 col-md-8 col-lg-6">
+            <h1 class="mb-4">ご購入ありがとうございます</h1>
+            <p>内容は以下のURLからご確認ください</p>
+            <a href="https://docs.google.com/document/d/1gJmvtCaFOLZz3SKLWnAihYuRudljqS5tDI2H0337ppw/edit?usp=sharing" target="_blank">https://docs.google.com/document/d/1gJmvtCaFOLZz3SKLWnAihYuRudljqS5tDI2H0337ppw/edit?usp=sharing</a>
+            <span class="text-danger">URLは必ずメモなどにお控えください</span>
+            <p>ご不明点やご質問等ございましたらX(@_poch3)のDMまでご連絡ください</p>
+        </div>
+        </div>
+    </body>
+    </html>
+    """, status_code=200)
         else:
-            return HTMLResponse(content=f"<html><body>GASへのPOSTリクエストに失敗しました<br>エラー詳細: {response.text}</body></html>", status_code=400)
+            return HTMLResponse(content=f"""
+    <!DOCTYPE html>
+    <html lang="ja">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>購入失敗</title>
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" crossorigin="anonymous">
+    </head>
+    <body>
+        <div class="container mt-5">
+        <div class="col-12 col-md-8 col-lg-6">
+            <h1 class="mb-4">購入に失敗しました</h1>
+            <p>もう一度最初からやり直してください</p>
+        </div>
+        </div>
+    </body>
+    </html>
+    """, status_code=200)
     else:
-        return HTMLResponse(content=f"<html><body>購入失敗: {message}</body></html>", status_code=400)
+        return HTMLResponse(content=f"""
+    <!DOCTYPE html>
+    <html lang="ja">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>購入失敗</title>
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" crossorigin="anonymous">
+    </head>
+    <body>
+        <div class="container mt-5">
+        <div class="col-12 col-md-8 col-lg-6">
+            <h1 class="mb-4">購入に失敗しました</h1>
+            <p>{message}</p>
+        </div>
+        </div>
+    </body>
+    </html>
+    """, status_code=200)
 
 def check_paypay_link_format(paypayLink):
     # PayPayリンクの形式を確認する正規表現パターン
