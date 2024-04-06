@@ -62,7 +62,7 @@ async def submit_form(termsAgree: bool = Form(...), paypayLink: str = Form(...))
                 <div class="col-12 col-sm-10 col-md-8 col-lg-6 mx-auto">
                     <h1 class="mb-4">ご購入ありがとうございます</h1>
                     <p>内容は以下のURLからご確認ください</p>
-                    <a href="https://docs.google.com/document/d/1gJmvtCaFOLZz3SKLWnAihYuRudljqS5tDI2H0337ppw/edit?usp=sharing" target="_blank">購入内容のドキュメント</a>
+                    <a href="https://docs.google.com/document/d/1gJmvtCaFOLZz3SKLWnAihYuRudljqS5tDI2H0337ppw/edit?usp=sharing" target="_blank">https://docs.google.com/document/d/1gJmvtCaFOLZz3SKLWnAihYuRudljqS5tDI2H0337ppw/edit?usp=sharing</a>
                     <br>
                     <div class="alert alert-warning" role="alert">
                         商品URLは必ずメモなどにお控えください
@@ -127,7 +127,15 @@ async def submit_form(termsAgree: bool = Form(...), paypayLink: str = Form(...))
                 <div class="col-12 col-sm-10 col-md-8 col-lg-6 mx-auto">
                     <h1 class="mb-4">購入に失敗しました</h1>
                     <br>
-                    <p>{message}</p>
+                    <p>考えられる原因</p>
+                    <br>
+                    <p>・送金URLが間違っている</p>
+                    <br>
+                    <p>・金額が間違っている</p>
+                    <br>
+                    <p>・パスコードが設定されている</p>
+                    <br>
+                    <p>・URLの期限が切れている</p>
                 </div>
             </div>
         </div>
