@@ -41,69 +41,100 @@ async def submit_form(termsAgree: bool = Form(...), paypayLink: str = Form(...))
         # 受け取り
         order_status = paypay.receive(link_id)['payload']['orderStatus']
         if order_status == 'COMPLETED':
-
-            return HTMLResponse(content="""
+            content = """
     <!DOCTYPE html>
     <html lang="ja">
     <head>
         <meta charset="UTF-8">
+        <!-- レスポンシブデザインをサポートするためのビューポートメタタグ -->
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>購入完了</title>
+        <!-- Bootstrap CSS -->
         <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" crossorigin="anonymous">
+        <style>
+            /* ここにカスタムスタイルまたはメディアクエリを追加 */
+        </style>
     </head>
     <body>
         <div class="container mt-5">
-        <div class="col-12 col-md-8 col-lg-6">
-            <h1 class="mb-4">ご購入ありがとうございます</h1>
-            <p>内容は以下のURLからご確認ください</p>
-            <a href="https://docs.google.com/document/d/1gJmvtCaFOLZz3SKLWnAihYuRudljqS5tDI2H0337ppw/edit?usp=sharing" target="_blank">https://docs.google.com/document/d/1gJmvtCaFOLZz3SKLWnAihYuRudljqS5tDI2H0337ppw/edit?usp=sharing</a>
-            <span class="text-danger">URLは必ずメモなどにお控えください</span>
-            <p>ご不明点やご質問等ございましたらX(@_poch3)のDMまでご連絡ください</p>
-        </div>
+            <!-- 最大幅が異なるデバイスでレスポンシブに対応 -->
+            <div class="row">
+                <div class="col-12 col-sm-10 col-md-8 col-lg-6 mx-auto">
+                    <h1 class="mb-4">ご購入ありがとうございます</h1>
+                    <p>内容は以下のURLからご確認ください</p>
+                    <a href="https://docs.google.com/document/d/1gJmvtCaFOLZz3SKLWnAihYuRudljqS5tDI2H0337ppw/edit?usp=sharing" target="_blank">購入内容のドキュメント</a>
+                    <br>
+                    <div class="alert alert-warning" role="alert">
+                        商品URLは必ずメモなどにお控えください
+                    </div>
+                    <p>ご不明点やご質問等ございましたらX(@_poch3)のDMまでご連絡ください。</p>
+                </div>
+            </div>
         </div>
     </body>
     </html>
-    """, status_code=200)
+    """
+            return HTMLResponse(content=content, status_code=200)
         else:
-            return HTMLResponse(content=f"""
+            content = """
     <!DOCTYPE html>
     <html lang="ja">
     <head>
         <meta charset="UTF-8">
+        <!-- レスポンシブデザインをサポートするためのビューポートメタタグ -->
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>購入失敗</title>
+        <!-- Bootstrap CSS -->
         <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" crossorigin="anonymous">
+        <style>
+            /* ここにカスタムスタイルまたはメディアクエリを追加 */
+        </style>
     </head>
     <body>
         <div class="container mt-5">
-        <div class="col-12 col-md-8 col-lg-6">
-            <h1 class="mb-4">購入に失敗しました</h1>
-            <p>もう一度最初からやり直してください</p>
-        </div>
+            <!-- 最大幅が異なるデバイスでレスポンシブに対応 -->
+            <div class="row">
+                <div class="col-12 col-sm-10 col-md-8 col-lg-6 mx-auto">
+                    <h1 class="mb-4">購入に失敗しました</h1>
+                    <br>
+                    <p>最初からやり直してください</p>
+                </div>
+            </div>
         </div>
     </body>
     </html>
-    """, status_code=200)
+    """
+            return HTMLResponse(content=content, status_code=200)
     else:
-        return HTMLResponse(content=f"""
+        content = """
     <!DOCTYPE html>
     <html lang="ja">
     <head>
         <meta charset="UTF-8">
+        <!-- レスポンシブデザインをサポートするためのビューポートメタタグ -->
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>購入失敗</title>
+        <!-- Bootstrap CSS -->
         <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" crossorigin="anonymous">
+        <style>
+            /* ここにカスタムスタイルまたはメディアクエリを追加 */
+        </style>
     </head>
     <body>
         <div class="container mt-5">
-        <div class="col-12 col-md-8 col-lg-6">
-            <h1 class="mb-4">購入に失敗しました</h1>
-            <p>{message}</p>
-        </div>
+            <!-- 最大幅が異なるデバイスでレスポンシブに対応 -->
+            <div class="row">
+                <div class="col-12 col-sm-10 col-md-8 col-lg-6 mx-auto">
+                    <h1 class="mb-4">購入に失敗しました</h1>
+                    <br>
+                    <p>{message}</p>
+                </div>
+            </div>
         </div>
     </body>
     </html>
-    """, status_code=200)
+    """
+        return HTMLResponse(content=content, status_code=200)
 
 def check_paypay_link_format(paypayLink):
     # PayPayリンクの形式を確認する正規表現パターン
