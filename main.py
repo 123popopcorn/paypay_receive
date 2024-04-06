@@ -62,9 +62,8 @@ async def submit_form(termsAgree: bool = Form(...), paypayLink: str = Form(...))
                 <div class="col-12 col-sm-10 col-md-8 col-lg-6 mx-auto">
                     <h1 class="mb-4">ご購入ありがとうございます</h1>
                     <p>内容は以下からご確認ください</p>
-                    <br>
                     <a href="https://docs.google.com/document/d/1gJmvtCaFOLZz3SKLWnAihYuRudljqS5tDI2H0337ppw/edit?usp=sharing" target="_blank">商品はこちら</a>
-                    <br>
+                    <br><br>
                     <p>ご不明点やご質問等ございましたらX(@_poch3)のDMまでご連絡ください。</p>
                 </div>
             </div>
